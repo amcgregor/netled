@@ -1,7 +1,7 @@
 Summary: Network Monitoring Utility
 Name: netled
-Version: 3.0
-Release: 8
+Version: 4.0
+Release: 10
 Copyright: GPL
 Group: Network/Deamons
 Source: https://github.com/amcgregor/netled/

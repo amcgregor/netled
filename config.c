@@ -1,7 +1,15 @@
+//
+// File        : config.c
+// Description : The main configuration routines.
+// Version     : 4.0
+// Author      : Alice Bevan-McGregor (alice@gothcandy.com)
+// Maintainer  : Alice Bevan-McGregor (alice@gothcandy.com)
+//
+
 #include <stdio.h>
 #include <linux/kd.h>
-#include "configfile.h"
-  
+#include "config.h"
+
 NetledConfig *getconf( NetledConfig *cfg, FILE *configfile ) {
   int ch = 0;
   char buf[LINEBUFSIZE];
@@ -30,14 +38,14 @@ NetledConfig *getconf( NetledConfig *cfg, FILE *configfile ) {
 
     if( sscanf( buf, "%s %s", &ledname, &funcname ) == 2 ) { /* parse line */
       printf( "got \"%s\"=\"%s\"\n", funcname, ledname );
-      if( strcmp( SENDIDENT, funcname ) == 0 )
-	cfg->sendled = leds( ledname );
-      else if( strcmp( RECVIDENT, funcname ) == 0 )
-	cfg->recvled = leds( ledname );
-      else if( strcmp( CARRIDENT, funcname ) == 0 )
-	cfg->carrled = leds( ledname );
-      else
-	fprintf( stderr, "warning: bad line in config, sipping...\n" );
+//      if( strcmp( SENDIDENT, funcname ) == 0 )
+//	cfg->sendled = leds( ledname );
+//      else if( strcmp( RECVIDENT, funcname ) == 0 )
+//	cfg->recvled = leds( ledname );
+//      else if( strcmp( CARRIDENT, funcname ) == 0 )
+//	cfg->carrled = leds( ledname );
+//      else
+//	fprintf( stderr, "warning: bad line in config, sipping...\n" );
     }
     
     while( ch != '\n' && ch != EOF ) /* dump to end of line */

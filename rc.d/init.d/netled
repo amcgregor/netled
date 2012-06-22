@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# source function library
+. /etc/rc.d/init.d/functions
+
+ETHER=eth0
+
+RETVAL=0
+
+case "$1" in
+  start)
+	echo -n "Starting NetLED services on ${ETHER}: "
+	/usr/local/bin/netled console ${ETHER} -d
+	RETVAL=$?
+	echo -n "netled"
+	[ $RETVAL -eq 0 ] && touch /var/run/netled.pid
+	;;
+  stop)
+	echo -n "Shutting down NetLED services on ${ETHER}: "
+	/usr/local/bin/netled console -k
+	RETVAL=$?
+	echo -n "netled"
+	[ $RETVAL -eq 0 ] && rm -f /var/run/netled.pid
+	echo
+	;;
+  restart|reload)
+	$0 stop
+	$0 start
+	RETVAL=$?
+	;;
+  status)
+	status netled
+	RETVAL=$?
+	;;
+  *)
+	echo "Usage: netled {start|stop|status|restart|reload}"
+	exit 1
+esac
+
+exit $RETVAL
+

@@ -1,0 +1,14 @@
+Instalation of NetLED is easy.  Follow these easy steps:
+    1) go to the directory where the sources are held
+    2) type "make install"
+    3) if there were no errors, and you are running
+	a) as root
+	b) a Red-Hat 6.1 machine
+       then type "make installrc" to install the daemon startup/shutdown
+       in the /etc/rc.d directory.  If you changed the location of the
+       NetLED executable, you must edit the files in the rc.d directory
+       (where the sources are held) by hand and change the paths.
+	
+See the man page for instructions on running the program.
+
+See the website (http://netled.marginsoftware.com/) for updated documentation.

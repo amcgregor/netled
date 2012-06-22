@@ -4,202 +4,228 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <signal.h>
-#include <sys/ioctl.h>
+#include <getopt.h>
+#include <errno.h>
 
+#include <sys/ioctl.h>
 #include <linux/kd.h>
 #include <linux/types.h>
 
-#define LEDOFF  0
-#define LEDON   1
+#include "if.h"
+#include "config.h"
+#include "ledctrl.h"
+#include "daemon.h"
 
-void toggleled ( int ttyfd, unsigned char led, unsigned char status ) {
-  unsigned char savedleds;  /* saved led status */
-  unsigned char tempbyte;
-  ioctl ( ttyfd, KDGETLED, &savedleds );
-  if ( status == LEDON ) {
-    ioctl ( ttyfd, KDSETLED, savedleds|led );
-  } else {
-    tempbyte = 0xFF;
-    tempbyte ^= led;
-    ioctl ( ttyfd, KDSETLED, savedleds&tempbyte );
-  }
+const char *NETLED_VERSION_STRING = "NetLED Version 4.0";
+
+void show_help ( void ) {
+  fprintf(stderr, "Usage: netled [options]\n");
+  fprintf(stderr, "  -t, --tty=[tty]              which tty leds to flash, use\n");
+  fprintf(stderr, "                               --tty=console for every tty\n");
+  fprintf(stderr, "                               (default=console)\n");
+  fprintf(stderr, "  -r, --refresh=[ms]           refresh rate in milliseconds \n");
+  fprintf(stderr, "                               (default=100)\n");
+  fprintf(stderr, "  -R, --rx=[led]               set the led to flash for RX\n");
+  fprintf(stderr, "                               led=off,caps,num,scroll\n");
+  fprintf(stderr, "                               (default=config file)\n");
+  fprintf(stderr, "  -T, --tx=[led]               set the led to flash for TX\n");
+  fprintf(stderr, "                               led=off,caps,num,scroll\n");
+  fprintf(stderr, "                               (default=config file)\n");
+  fprintf(stderr, "  -i, --interface=[interface]  specify interface to monitor.\n");
+  fprintf(stderr, "                               ie. --interface=eth0,\n");
+  fprintf(stderr, "                               (default=eth0)\n");
+  fprintf(stderr, "  -d, --daemonize              run NetLED as a daemon\n");
+  fprintf(stderr, "  -k, --kill                   kill a running NetLED daemon\n");
+  fprintf(stderr, "  -q, --query                  find the PID of the NetLED daemon\n");
+  fprintf(stderr, "  -l, --list                   list available interfaces\n");
+  fprintf(stderr, "  -h, --help                   display this help and exit\n");
+  fprintf(stderr, "  -v, --version                display version info and exit\n\n");
 }
 
-/*get pid from /var/run/netled.pid*/
-int get_pid(void){
-  int pid;
-  FILE *PID = NULL;
-  char line[256];
-
-  PID=fopen("/var/run/netled.pid","r");
-  if(NULL==PID||feof(PID)){
-    return -1;
-  }
-  while(!feof(PID)){
-    fgets(line, 255, PID);
-    pid=atoi(line);
-    if(pid>1){
-      fclose(PID);
-      return pid;
-    }
-  }
-  fclose(PID);
-  return -1;
-}
-
-/*write pid to /var/run/netled.pid*/
-void put_pid(pid_t pid){
-  FILE *PID = NULL;
-  PID=fopen("/var/run/netled.pid","w");
-  if(PID==NULL){
-    fprintf(stderr,"Coulndt open pid file for writing\n");
-  }
-  fprintf(PID,"%i\n",pid);
-  fclose(PID);
-}
-
-/* comment goes here, but you should know what this does */
-void daemon_kill(int sig){
-  unlink("/var/run/netled.pid");
-  exit(0);
-}
-
-/*fork a child, and exit parent if succesfull...*/
-void daemonize(void){
-  pid_t me;				    /* pid of process...*/
-  int oldpid;
-  /* Check if allready running, if so dont start another */
-  oldpid=get_pid();
-  if(oldpid!=-1){
-    fprintf(stderr,"netled allready running with pid %i\n",oldpid);
-    exit(1);
-  }
-  /* Install signal handler before we fork */
-  signal(SIGTERM,&daemon_kill);
-  /*  we start off by forking ourself... */
-  me=fork();
-  if(0!=me){
-    /*in parent...did things go ok?*/
-    if(-1!=me){
-      /*things went ok, write out pid and exit*/
-      put_pid(me);
-      exit(0);
-    } else {
-      /*whoops error...*/
-      fprintf(stderr, "Problem forking..");
-      exit(1);
-    }
-  }
-}
-
-/* main application procedure */
+// main application procedure
 int main ( int argc, char **argv ) {
   // variables
-  FILE *procnet = NULL;
-  char ttyname[20] = "/dev/";
+  char tty[15] = "/dev/console";  /* default to the console */
   int ttyfd;
-  char line[255];
-  char name[16];
-  char recieved[16];
-  char oldrecieved[16];
-  char transmit[16];
-  char oldtransmit[16];
-  int waitdelay = 100;
-  int i;
-  int daemonized;
+ 
+  int waitdelay = 100, i = 0;
+  
+  char *interface = "eth0";
+  if_throughput_t interdat = { "eth0", 0, 0, 0, 0, 0, 0 };
+  int rx_led = LED_SCR;
+  int tx_led = LED_SCR;
 
-  if ( daemonized == 0 ) {
-    fprintf ( stderr, "\n NetLED Version 3.0 " );
-    fprintf ( stderr, "(see COPYING for lisence information)\n\n" );
-  }
+  /* process command line arguments */
+  while ( 1 ) {
+    int option_index = 0;
+    int c;
+
+    static struct option long_options[] = {
+      {"tty", 1, 0, 't'},
+      {"interface", 1, 0, 'i'},
+      {"list", 0, 0, 'l'},
+      {"refresh", 1, 0, 'r'},
+      {"help", 0, 0, 'h'},
+      {"version", 0, 0, 'v'},
+      {"tx", 1, 0, 'T'},
+      {"rx", 1, 0, 'R'},
+      {"query", 0, 0, 'q'},
+      {"daemonize", 0, 0, 'd'},
+      {"kill", 0, 0, 'k'},
+      {0, 0, 0, 0}
+    };
+     
+    c = getopt_long(argc, argv, "t:i:lr:hvT:R:qdk", 
+        long_options, &option_index);
     
-  if ( argc < 2 ) {
-    fprintf ( stderr, "  netled useage: netled <console> <interface> <refresh> [-k]\n" );
-    fprintf ( stderr, "    console    Select a console to flash the leds on.\n" );
-    fprintf ( stderr, "    interface  Select a running interface to monitor.\n" );
-//    fprintf ( stderr, "    refresh    Select a refresh rate, default is 100.\n" );
-    fprintf ( stderr, "    -d         Run as daemon, write pid to /var/run/netled.pid\n" );
-    fprintf ( stderr, "    -k         Kill the running deamon.\n\n" );
-    exit ( 1 );
-  }
+    if(c == -1)
+      break;
+    
+    switch(c) {
+      case 'T':                                   // --tx
+        if(strcasecmp(optarg, "off") == 0) {
+          tx_led = -1;
+        } else if(strcasecmp(optarg, "caps") == 0) {
+          tx_led = LED_CAP;
+        } else if(strcasecmp(optarg, "cap") == 0) {
+          tx_led = LED_CAP;
+        } else if(strcasecmp(optarg, "num") == 0) {
+          tx_led = LED_NUM;
+        } else if(strcasecmp(optarg, "scroll") == 0) {
+          tx_led = LED_SCR;
+        } else if(strcasecmp(optarg, "scr") == 0) {
+          tx_led = LED_SCR;
+        } else {
+          printf("Error: invalid --tx option: %s\n", optarg);
+          exit(1);
+        }
+        break;
 
-  if ( strlen ( argv[1] ) >= 10 ) {
-    fprintf (stderr, " Invalid argument: Argument too long!" );
-    exit ( 1 );
-  }
+      case 'R':                                   // --rx
+        if(strcasecmp(optarg, "off") == 0) {
+          rx_led = -1;
+        } else if(strcasecmp(optarg, "caps") == 0) {
+          rx_led = LED_CAP;
+        } else if(strcasecmp(optarg, "cap") == 0) {
+          rx_led = LED_CAP;
+        } else if(strcasecmp(optarg, "num") == 0) {
+          rx_led = LED_NUM;
+        } else if(strcasecmp(optarg, "scroll") == 0) {
+          rx_led = LED_SCR;
+        } else if(strcasecmp(optarg, "scr") == 0) {
+          rx_led = LED_SCR;
+        } else {
+          printf("Error: invalid --rx option: %s\n", optarg);
+          exit(1);
+        }
+        break;
 
-  strcat( ttyname, argv[1]);
-  if ( ( ttyfd = open ( ttyname, O_RDWR ) ) < 0) {
-    fprintf ( stderr, " Error opening keyboard %s\n ", ttyname); 
-    exit ( 1 );
-  }
+      case 't':                                   // --tty
+        strcpy(tty, "/dev/");
+        strncat(tty, optarg, sizeof(tty)/sizeof(char) - 5);
+        break;
+        
+      case 'i':                                   // --interface
+        strcpy(interface, optarg);
+        break;
+        
+      case 'r':                                   // --refresh
+        waitdelay = (int)strtol(optarg, NULL, 10);
+        if(errno == ERANGE) {
+          printf("Warning: Invalid refresh rate specified, using 100: %s\n", 
+              optarg);
+          waitdelay = 100;
+        } 
+        
+        if(waitdelay < 10) {
+          printf("Warning: Refresh rate is tiny, using 10 instead: %s\n", 
+              optarg);
+          waitdelay = 10;
+        }
+        
+        if(waitdelay > 10000) {
+          printf("Note: Refresh rate is quite large." 
+                 "  Is this really what you want?: %s\n", optarg);
+        }
+        break;
+        
+      case 'l':                                   // --list
+        printf("Available interfaces: ");
+        show_interfaces();
+        exit(0);
+        
+      case 'v':                                   // --version
+        printf("%s\n", NETLED_VERSION_STRING);
+        exit(0);
 
-  /*Some quick arg processing, check if we should be deamon or take out a daemon*/
-  for(i=1; i<argc; i++){
-    if(strcmp(argv[i],"-k")==0){
-      /*we reuse dummy, wont need it after this...*/
-	i=get_pid();
-	if(i>0){/*passing an int <= 0 to kill() does a lot more than we want*/
-	  if(kill(i,SIGTERM)!=0){
-	    fprintf(stderr,"Could not kill process %i\n", i);
+      case 'h':                                   // --help
+        show_help();
+        exit(0);
+
+      case 'd':
+	daemonized = 1;
+        break;
+
+      case 'k':
+	i = get_pid();
+	if ( i > 0 ) {
+	  if ( kill ( i, SIGTERM ) != 0 ) {
+	    fprintf (stderr, "Error: could not kill process %i.\n", i);
 	  }
 	} else {
-	  fprintf(stderr, "No netled process running..\n");
+	  fprintf(stderr, "Error: no netled process running.\n");
 	}
 	exit(0);
-      }
-      if(strcmp(argv[i],"-d")==0){
-	daemonized = 1;
-      }
+
+      case 'q':
+        i = get_pid();
+	if ( i > 0 ) {
+	  fprintf (stderr, "NetLED process running with PID %i.\n", i);
+	} else {
+	  fprintf (stderr, "Error: no netled process running.\n");
+	}
+	exit(0);
+        
+      default:
+        printf("Error: Unexpected getopt() return value: %c\n", c);
+        exit(1);
     }
+  }
+  
+  /* check for invalid interfaces, not the best way to do it but not a  
+     big deal cause we'll just be executing this code once  */
+/*  if ( !is_interface_valid(interface) ) {
+    printf("Error: Unknown interface %s, "
+           "use the -l option to view available interfaces\n", interface);
+    exit(1);
+  }*/
+  
+  /* open the tty */
+  if ( (ttyfd = open(tty,O_RDWR) ) < 0 ) {
+      printf("Error: Unable to open tty: %s\n", tty);
+      exit(1);
+  }
 
   if ( daemonized != 0 ) daemonize ( );
 
+  strcpy (interdat.if_name, interface);
+  
   while ( 1 ) {
-    procnet = fopen ( "/proc/net/dev", "r" );
-    if ( procnet == NULL ) {
-      perror ( "Error opening /proc/net/dev" );
-      exit ( 1 );
-    }
-    
-    fgets ( line, 255, procnet );
-    fgets ( line, 255, procnet );
+    if (!get_if_throughput(&interdat)) {
+      if ( interdat.chg_bytes_in > 0 ) {
+        toggleled ( ttyfd, LED_CAP, LEDON );
+      } else {
+        toggleled ( ttyfd, LED_CAP, LEDOFF );
+      }
 
-    while ( fgets ( line, 255, procnet ) ) {
-     
-      memset ( name, 0, sizeof ( name ) );
-      strncpy ( name, line, 6 );
-
-      if ( strstr ( name, argv[2] ) ) {
-      
-        memset ( recieved, 0, sizeof ( recieved ) );
-        strncpy ( recieved, line + 15, 8 );
-
-        memset ( transmit, 0, sizeof ( transmit ) );
-        strncpy ( transmit, line + 74, 8 ) ;
-
-//        printf ( "[H[Kname: \"%s\"\n", name);        
-        if ( strcmp ( recieved, oldrecieved ) ) {
-//          printf ( "[Krecieved: \"%s\"\n", recieved );
-          toggleled ( ttyfd, LED_CAP, LEDON );
-        } else {
-	  toggleled ( ttyfd, LED_CAP, LEDOFF );
-	}
-        if ( strcmp ( transmit, oldtransmit ) ) {
-//          printf ( "[Ktransmit: \"%s\"\n", transmit ); 
-	  toggleled ( ttyfd, LED_SCR, LEDON );
-        } else {
-	  toggleled ( ttyfd, LED_SCR, LEDOFF );
-	}
-   
-        strcpy ( oldrecieved, recieved );
-        strcpy ( oldtransmit, transmit );
-
+      if ( interdat.chg_bytes_out > 0 ) {
+        toggleled ( ttyfd, LED_SCR, LEDON );
+      } else {
+        toggleled ( ttyfd, LED_SCR, LEDOFF );
       }
     }
 
-    fclose (procnet);
-    usleep (waitdelay * 100);
+    usleep(waitdelay*1000);
   }  
   return 0;
 }

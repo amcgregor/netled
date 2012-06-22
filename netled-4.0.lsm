@@ -1,7 +1,7 @@
 Begin3
 Title:          NetLED
-Version:        3.0
-Entered-date:   April 24 2000
+Version:        4.0
+Entered-date:   September 20 2000
 Description:    NetLED monitors the transferr of packets across any interface using the LEDs on your keyboard.
 Keywords:       network, ethernet, ppp, slip, Linux, freeware, keyboard, monitor
 Author:         alice@gothcandy.com (Alice Bevan-McGregor)
