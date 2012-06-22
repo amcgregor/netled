@@ -1,7 +1,7 @@
 Begin3
 Title:          NetLED 
-Version:        1.2 
-Entered-date:   May 12th 1999 
+Version:        2.0 
+Entered-date:   May 29th 1999 
 Description:    NetLED monitors the RD and SD of interfaces using the LEDs on your keyboard. 
 Keywords:       network, ethernet, ppp, slip, Linux, freeware, keyboard, monitor
 Author:         alice@gothcandy.com (Alice Bevan-McGregor)

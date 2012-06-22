@@ -1,9 +1,9 @@
-.TH NETLED 1 "April 1999" \" -*- nroff -*-
+.TH NETLED 1 "May 1999" \" -*- nroff -*-
 .SH NAME
 netled \- device monitoring utility
 .SH SYNOPSIS
 .B netled
-<console> <interface> [refresh] [-k]
+<console> <interface> [refresh] [-d] [-k]
 
 .SH DESCRIPTION
 .BR netled 
@@ -39,18 +39,22 @@ can monitor.  eth0, lo, ppp0, etc.
 .TP
 .I "refresh"
 Set the refresh rate.  The default is 100ms.
-.TP
-.I "\-k"
-Kill.  In a later version, this will be implemented.  If anyone can tell me how to implement running NetLED perminantly in the background (pid file?) please e-mail me.
 .br
 .I "Example: \'netled console ppp0 500\'
+.TP
+.I "\-d"
+Deamonize.  Run NetLED as a deamon (without the nasty use of & and skill)
+.br
+.I "Example: \'netled console ppp0 500 -d\'
+.TP
+.I "\-k"
+Kill.  Kill the running deamon.  You can run NetLED with only this option.
+.br
+.I "Example: \'netled -k\'
 
 .SH BUGS
 It seems that my program will not correctly change the condition
-of the keyboard LEDs under some versions/configurations of X.  Fixed in this
-version is a problem with security, a problem with people typing /dev/ in
-front of the device, and gave the user some options regarding to
-downloading...
+of the keyboard LEDs under some versions/configurations of X.
 
 .SH FIX
 If anyone fixes any bugs, or modifies my program in any way, can you please
@@ -76,11 +80,17 @@ for support and more testing!
 .I Steve Shah
 &
 .I Spoon
-for their help with developing a version that works with 2.1.x and 2.2.x
+for his help with developing a version that works with 2.1.x and 2.2.x
 kernels.
 .br
 .I Robert Lynch
 for his time helping me with the blasted RPM system!
+.br
+.I Gerhard Siegesmund
+for everything he did (patches, updates, and more)...
+.br
+.I Anders
+for telling me where I can go to get information on background processing.
 
 .SH FILES
 .TP

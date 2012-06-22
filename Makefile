@@ -1,30 +1,29 @@
 #
 # Makefile - NetLED Make File
 #
-# make
+# make          - By default, make all.
+# make all      - Make everything.
 # make clean    - Clean up after creating (remove o files, core, debug, etc)
 # make install  - Install the binary (and make it if you haven't already)
+# make update   - Download the update patch and inflict it on your computer.
 #
 
-exe = netled
-app = netled.c
-led = netleds.c
-location = /usr/local/bin
-gcc = gcc -DLINUX 
+EXE = netled
+LIB = netleds
+LOCATION = /usr/local/bin
+GCC = gcc -DLINUX 
 
-all:	$(exe)
+all:	$(EXE)
 
-netled: netleds.o netled.o
-	$(gcc) -O9	$(app) $(led)	-o netled
+netled: netleds.o
+	gcc -c -o $(EXE).o	$(EXE).c
+	gcc    -o $(EXE)	$(EXE).o	$(LIB).o
 
-netleds.o: netleds.c netleds.h
-	$(gcc) -O9 -c	$(led)		-o netleds.o
-
-netled.o: netled.c netleds.h
-	$(gcc) -O9 -c	$(app)		-o netled.o
+netleds.o:
+	gcc -c -o netleds.o netleds.c
 
 install:
-	install $(exe) $(location)/$(exe) --mode 6755
+	install $(EXE) $(LOCATION)/$(EXE) --mode 6755
 	install netled.conf /etc/netled.conf
 	install netled.1 /usr/local/man/man1/netled.1
 

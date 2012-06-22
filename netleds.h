@@ -1,8 +1,6 @@
-int ttyfd;			/* fd for the tty */
-
-void scrollon(void);
-void scrolloff(void);
-void capson(void);
-void capsoff(void);
-void numon(void);
-void numoff(void);
+void scrollon(int ttyfd);
+void scrolloff(int ttyfd);
+void capson(int ttyfd);
+void capsoff(int ttyfd);
+void numon(int ttyfd);
+void numoff(int ttyfd);

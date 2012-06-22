@@ -2,40 +2,50 @@
 #include <linux/types.h>
 #include "netleds.h"
 
-unsigned char savedleds = 0; 	/* saved led states */
-
-void scrollon(void)
+void scrollon(int ttyfd)
 {
-    ioctl(ttyfd,KDGETLED,&savedleds);
-    ioctl(ttyfd,KDSETLED,savedleds^LED_SCR);
+    unsigned char savedleds;    /* saved led states */
+
+	ioctl(ttyfd,KDGETLED,&savedleds);
+    ioctl(ttyfd,KDSETLED,savedleds|LED_SCR);
 }
 
-void scrolloff(void)
+void scrolloff(int ttyfd)
 {
+    unsigned char savedleds;    /* saved led states */
+
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds&~LED_SCR);
 }
 
-void capson(void)
+void capson(int ttyfd)
 {
-    ioctl(ttyfd,KDGETLED,&savedleds);
-    ioctl(ttyfd,KDSETLED,savedleds^LED_CAP);
+    unsigned char savedleds;    /* saved led states */
+
+	ioctl(ttyfd,KDGETLED,&savedleds);
+    ioctl(ttyfd,KDSETLED,savedleds|LED_CAP);
 }
 
-void capsoff(void)
+void capsoff(int ttyfd)
 {
+    unsigned char savedleds;    /* saved led states */
+
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds&~LED_CAP);
 }
 
-void numon(void)
+void numon(int ttyfd)
 {
+    unsigned char savedleds;    /* saved led states */
+
     ioctl(ttyfd,KDGETLED,&savedleds);
-    ioctl(ttyfd,KDSETLED,savedleds^LED_NUM);
+    ioctl(ttyfd,KDSETLED,savedleds|LED_NUM);
 }
 
-void numoff(void)
+void numoff(int ttyfd)
 {
+    unsigned char savedleds;    /* saved led states */
+
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds&~LED_NUM);
 }
