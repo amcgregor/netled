@@ -1,31 +1,29 @@
-/*
-Begin3
-Title:          NetLED 
-Version:        2.0 
-Entered-date:   May 29th 1999 
-Description:    NetLED monitors the RD and SD of interfaces using the LEDs on your keyboard. 
-Keywords:       network, ethernet, ppp, slip, Linux, freeware, keyboard, monitor
-Author:         alice@gothcandy.com (Alice Bevan-McGregor)
-Maintained-by:  alice@gothcandy.com (Alice Bevan-McGregor)
-Primary-site:   https://github.com/amcgregor/netled/
-Original-site:  https://github.com/amcgregor/netled/
-Platform:       Linux
-Copying-policy: GPL
-End
-*/
-
-/* Daemon/kill support added by Kenneth Skaar
-   (kenneths@regina.uio.no) on 25th of May, 1999 */
-   
-#include <fcntl.h>
-#include <linux/kd.h>
-#include <linux/types.h>
-#include <signal.h> 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include <unistd.h>
-#include "netleds.h"
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/ioctl.h>
+
+#include <linux/kd.h>
+#include <linux/types.h>
+
+#define LEDOFF  0
+#define LEDON   1
+
+void toggleled ( int ttyfd, unsigned char led, unsigned char status ) {
+  unsigned char savedleds;  /* saved led status */
+  unsigned char tempbyte;
+  ioctl ( ttyfd, KDGETLED, &savedleds );
+  if ( status == LEDON ) {
+    ioctl ( ttyfd, KDSETLED, savedleds|led );
+  } else {
+    tempbyte = 0xFF;
+    tempbyte ^= led;
+    ioctl ( ttyfd, KDSETLED, savedleds&tempbyte );
+  }
+}
 
 /*get pid from /var/run/netled.pid*/
 int get_pid(void){
@@ -60,13 +58,11 @@ void put_pid(pid_t pid){
   fclose(PID);
 }
 
-
+/* comment goes here, but you should know what this does */
 void daemon_kill(int sig){
   unlink("/var/run/netled.pid");
   exit(0);
 }
-  
-
 
 /*fork a child, and exit parent if succesfull...*/
 void daemonize(void){
@@ -94,130 +90,116 @@ void daemonize(void){
       exit(1);
     }
   }
-  /* Install SIGTERM handler, so we remove pid file if killed... */
-       
-  
 }
 
+/* main application procedure */
+int main ( int argc, char **argv ) {
+  // variables
+  FILE *procnet = NULL;
+  char ttyname[20] = "/dev/";
+  int ttyfd;
+  char line[255];
+  char name[16];
+  char recieved[16];
+  char oldrecieved[16];
+  char transmit[16];
+  char oldtransmit[16];
+  int waitdelay = 100;
+  int i;
+  int daemonized;
 
-
-
-int main(int argc, char *argv[])		
-{
+  if ( daemonized == 0 ) {
+    fprintf ( stderr, "\n NetLED Version 3.0 " );
+    fprintf ( stderr, "(see COPYING for lisence information)\n\n" );
+  }
     
-    /* variables */
-    FILE *F1 = NULL;                        /* file in proc fs */
-    char tty[15] = "/dev/";                 /* device name */
-    int packets[2] = { 0, 0 };              /* packets, duh */
-    static int last_packets[2] = { 0, 0 };  /* time of last packet */
-    int dummy;                              /* dummy variable */
-    char line[256] = { '\0' };              /* put comment here */
-    char face[256];                         /* put comment here */
-    char *word = NULL;                      /* put comment here */
-    char *colon;                            /* interface name delimiter */
-    int waitdelay;                          /* How long do I wait? */
-    int ttyfd;                              /* The TTY to write to WAS global */
-    int daemon=0;                           /* Are we running as a daemon.. */
-    int skip=0;
-    
-    /*Some quick arg processing, check if we should be deamon or take out a daemon*/
-    for(dummy=1; dummy<argc; dummy++){
-      if(strcmp(argv[dummy],"-k")==0){
-	/*we reuse dummy, wont need it after this...*/
-	dummy=get_pid();
-	if(dummy>0){/*passing an int <= 0 to kill() does a lot more than we want*/
-	  if(kill(dummy,SIGTERM)!=0){
-	    fprintf(stderr,"Could not kill process %i\n", dummy);
+  if ( argc < 2 ) {
+    fprintf ( stderr, "  netled useage: netled <console> <interface> <refresh> [-k]\n" );
+    fprintf ( stderr, "    console    Select a console to flash the leds on.\n" );
+    fprintf ( stderr, "    interface  Select a running interface to monitor.\n" );
+//    fprintf ( stderr, "    refresh    Select a refresh rate, default is 100.\n" );
+    fprintf ( stderr, "    -d         Run as daemon, write pid to /var/run/netled.pid\n" );
+    fprintf ( stderr, "    -k         Kill the running deamon.\n\n" );
+    exit ( 1 );
+  }
+
+  if ( strlen ( argv[1] ) >= 10 ) {
+    fprintf (stderr, " Invalid argument: Argument too long!" );
+    exit ( 1 );
+  }
+
+  strcat( ttyname, argv[1]);
+  if ( ( ttyfd = open ( ttyname, O_RDWR ) ) < 0) {
+    fprintf ( stderr, " Error opening keyboard %s\n ", ttyname); 
+    exit ( 1 );
+  }
+
+  /*Some quick arg processing, check if we should be deamon or take out a daemon*/
+  for(i=1; i<argc; i++){
+    if(strcmp(argv[i],"-k")==0){
+      /*we reuse dummy, wont need it after this...*/
+	i=get_pid();
+	if(i>0){/*passing an int <= 0 to kill() does a lot more than we want*/
+	  if(kill(i,SIGTERM)!=0){
+	    fprintf(stderr,"Could not kill process %i\n", i);
 	  }
 	} else {
 	  fprintf(stderr, "No netled process running..\n");
 	}
 	exit(0);
       }
-      if(strcmp(argv[dummy],"-d")==0){
-	daemon=1;
+      if(strcmp(argv[i],"-d")==0){
+	daemonized = 1;
       }
     }
-    
-    /* start up message / syntax */
-    if(daemon==0){ /*If we are a daemon we run in silent mode...*/
-      fprintf(stderr, "\n NetLED Version 2.0 ");
-      fprintf(stderr, "(see COPYING for lisence information)\n\n");
-    }
-    if (argc<2) {
-        fprintf(stderr, "   netled useage: netled <console> <interface> <refresh> [-k]\n");
-        fprintf(stderr, "    console    Select a console to flash the leds on.\n");
-        fprintf(stderr, "    interface  Select a running interface to monitor.\n");
-        fprintf(stderr, "    refresh    Select a refresh rate, default is 100.\n");
-	fprintf(stderr, "    -d         Run as daemon, write pid to /var/run/netled.pid\n");
-	fprintf(stderr, "    -k         Kill the running deamon.\n");
-        fprintf(stderr, "               Not yet implemented, please do not use.\n\n");
-        exit(1);
-    }
 
-    if (strlen(argv[1]) >= 10) {
-	fprintf(stderr, " Invalid argument: Argument too long!");
-	exit (1);
-    }
+  if ( daemonized != 0 ) daemonize ( );
 
-    /* error handle */
-    strcat(tty,argv[1]);
-    if((ttyfd = open(tty,O_RDWR)) < 0) {
-        fprintf(stderr," Error opening keyboard %s\n ",tty); 
-        exit(1);
+  while ( 1 ) {
+    procnet = fopen ( "/proc/net/dev", "r" );
+    if ( procnet == NULL ) {
+      perror ( "Error opening /proc/net/dev" );
+      exit ( 1 );
     }
     
-    if (!argv[3]) {
-        waitdelay = 100;
-	if(daemon==0){
-	  fprintf(stderr," No refresh specified, using default of %d.", waitdelay);
+    fgets ( line, 255, procnet );
+    fgets ( line, 255, procnet );
+
+    while ( fgets ( line, 255, procnet ) ) {
+     
+      memset ( name, 0, sizeof ( name ) );
+      strncpy ( name, line, 6 );
+
+      if ( strstr ( name, argv[2] ) ) {
+      
+        memset ( recieved, 0, sizeof ( recieved ) );
+        strncpy ( recieved, line + 15, 8 );
+
+        memset ( transmit, 0, sizeof ( transmit ) );
+        strncpy ( transmit, line + 74, 8 ) ;
+
+//        printf ( "[H[Kname: \"%s\"\n", name);        
+        if ( strcmp ( recieved, oldrecieved ) ) {
+//          printf ( "[Krecieved: \"%s\"\n", recieved );
+          toggleled ( ttyfd, LED_CAP, LEDON );
+        } else {
+	  toggleled ( ttyfd, LED_CAP, LEDOFF );
 	}
-    } else {
-        waitdelay = atoi(argv[3]);
-	if(daemon==0){
-	  fprintf(stderr," Refresh of %d specified.", waitdelay);
+        if ( strcmp ( transmit, oldtransmit ) ) {
+//          printf ( "[Ktransmit: \"%s\"\n", transmit ); 
+	  toggleled ( ttyfd, LED_SCR, LEDON );
+        } else {
+	  toggleled ( ttyfd, LED_SCR, LEDOFF );
 	}
-    }
-	
-    /*Ok arguments and all read, things are up to speed, lets fork off...*/
-    if(daemon!=0){
-      daemonize();
+   
+        strcpy ( oldrecieved, recieved );
+        strcpy ( oldtransmit, transmit );
+
+      }
     }
 
-
-    /* main program loop */
-    while (1) {
-        /* open proc file */
-        F1 = fopen("/proc/net/dev", "r");
-        if (F1 == NULL) {
-            fprintf(stderr,"Error using proc "); 
-            exit(1);
-        }
-
-        strcpy(face, "");
-        while (1) {
-            fgets(line, 256, F1);
-            if (feof(F1)) break;
-            word = strtok(line, " ");
-            if (word != NULL) strcpy(face, word);
-            colon = strchr(face, ':');
-            if(colon) *colon = '\0';
-            if (strcmp(argv[2], face) == 0) {
-                word = strtok(NULL, " ");
-                if (word != NULL) sscanf(word, "%d", &packets[0]);
-                word = strtok(line+64, " "); 
-		word = strtok(NULL, " ");
-            	for (skip=0; skip < 5; skip++) word = strtok(NULL, " ");
-            	if (word != NULL) sscanf(word, "%d", &packets[1]);
-		if (packets[0]!=last_packets[0]) capson(ttyfd); else capsoff(ttyfd);
-                if (packets[1]!=last_packets[1]) scrollon(ttyfd); else scrolloff(ttyfd);
-                last_packets[0] = packets[0];
-                last_packets[1] = packets[1];
-            }
-        }
-	
-        /* delay */
-        fclose(F1);
-        sleep(waitdelay);
-    }
+    fclose (procnet);
+    usleep (waitdelay * 100);
+  }  
+  return 0;
 }

@@ -9,18 +9,16 @@
 #
 
 EXE = netled
-LIB = netleds
 LOCATION = /usr/local/bin
-GCC = gcc -DLINUX 
+CC = gcc -DLINUX 
+OBJS = netled.o
+VERSION = 3.0
 
-all:	$(EXE)
+all: netled
 
-netled: netleds.o
-	gcc -c -o $(EXE).o	$(EXE).c
-	gcc    -o $(EXE)	$(EXE).o	$(LIB).o
+netled: $(OBJS)
 
-netleds.o:
-	gcc -c -o netleds.o netleds.c
+netled.o: netled.c
 
 install:
 	install $(EXE) $(LOCATION)/$(EXE) --mode 6755
