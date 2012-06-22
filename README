@@ -1,0 +1,55 @@
+NetLED is a program I wrote to monitor connections.  NetLED uses a
+configuration file to control what LED on the keyboard represents what
+command.  An example configuration file folows:
+ ______________________________________________________________________________
+ 
+  # This is the default configuration file for NetLED.  For more infrmation,
+  # have a peek at the netled.conf man page.
+  # ???LOCK     MC      # Whatever Lock  ->  Modem LED
+    CAPLOCK     SD      # Caps Lock      -> Send Data
+    SCRLOCK     RD      # Scroll Lock    -> Recieve Data
+    NUMLOCK     CD      # Num Lock       -> Carrier Detect
+ ______________________________________________________________________________
+
+The setupfile is not currently used.  It will be implemented in later versions.
+Running "netled" by itself will spit the following at you:
+ ______________________________________________________________________________
+
+NetLED Version 1.1 (see COPYING for lisence information)
+
+  usage: netled [-k] [-w wait_time] <console> <interface> ... 
+    -k             Kill the running deamon.
+                     (Not yet implemented -- do not use!)
+    -w wait_time   Select how long to pause between checking for activity.
+                   Defaults to 100 milliseconds.
+    console        Select a console to flash the leds on.
+    interface      Select running interface(s) (up to 3) to monitor.
+ ______________________________________________________________________________
+
+NetLED is a strange title.  In my terms, it means "Network Light Emitting
+Deamon", but to most it means, "Networked Light Emitting Diode"
+
+The NetLED executable must be SUID Root, because of problems writing to
+/dev/console or whatever terminal you choose.  Only root can write to those
+devices.
+ ______________________________________________________________________________
+
+To find out what devices you can use, type ifconfig.  Anything listed can be
+used.  There should be at least a "lo" entry.  If you have a network, eth0
+should be there too.  If you are connected to the internet via a PPP
+connection, ppp0 should be there.  You can choose any of these.
+
+Note: You can use "/dev/" in the device names if you want, but you don't have
+to.  For the console device (e.g. /dev/console), NetLED accepts and uses the
+"/dev/" string.  For the network devices (e.g. ppp0, eth0), the "/dev/" string
+is inappropriate (after all, in Linux the network devices aren't in the /dev
+directory), and NetLED strips it off.
+
+For example, this will work: 
+
+    netled /dev/console /dev/ppp0
+
+but NetLED just converts it to:
+
+    netled console ppp0
+

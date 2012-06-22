@@ -1,0 +1,6 @@
+Instalation of NetLED is easy.  Follow these easy steps:
+	1) go to the directory where the sources are held
+	2) type "make"
+	3) if there are no errors, type "make install"
+
+See README for instructions on running the program.

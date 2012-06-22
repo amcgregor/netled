@@ -1,0 +1,26 @@
+    Version 0.1 (Release Alpha)
+     - The original version
+ ______________________________________________________________________________
+ 
+    Version 0.1.1 (Release Alpha, Bugfix 1)
+     - Fixed some stuff in the docs.
+     - Added this section.
+     - Clarified some common troubles in using devices.  See README for
+       details.
+ ______________________________________________________________________________
+
+    Version 0.1.2 (Release Beta, Bugfix 2)
+     - Fixed some more stuff in the docs.
+     - Added a MAN page.
+ ______________________________________________________________________________
+
+    Version 1.0 (Release Beta)
+     - Had enough people testing it to make shure it did not do anything
+       harsh, and so upped it a version and made it a beta.
+     - Added a few people to the credits, fixed a few things in the man
+       page.
+ ______________________________________________________________________________
+
+    Version 1.1
+     - Added deamon support. (but you still need to kill it yourself)
+     - Now has support for the <refresh> command line arg.

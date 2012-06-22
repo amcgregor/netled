@@ -1,0 +1,79 @@
+.TH NETLED 1 "April 1999" \" -*- nroff -*-
+.SH NAME
+netled \- device monitoring utility
+.SH SYNOPSIS
+.B netled
+<console> <interface> [-k] [refresh]
+
+.SH DESCRIPTION
+.BR netled 
+is a device monitoring utility designed to help a system administrator monitor the transmission and recieving of data over a loopback, ppp connection, or ethernet (hell, anything that
+.BR ifconfig
+can tell you about. 
+.BR netled 
+was written in C in hopes for an increase in program speed,
+efficency, and availability of more options, as opposed to other
+shell/perl scripts that are around.  It was designed to ease
+the pain of admins who use \'
+.BR ifconfig
+and
+.BR pppstats
+to monitor connections.
+
+.SH OPTIONS
+.TP
+.I "console"
+Selects the console you wish to change the LEDs for.  "ttyX" or use "console"
+to change the LEDs for all of them.
+.br
+.I "Example: \'netled tty2 ppp0\'"
+.TP
+.I "interface"
+Select the interface (device) you wish to monitor.  Anything that
+.BR ifconfig
+can display,
+.BR netled
+can monitor.  eth0, lo, ppp0, etc.
+.br
+.I "Example: \'netled console ppp0\'
+.TP
+.I "\-k"
+Kill.  In a later version, this will be implemented.  If anyone can tell me how to implement running NetLED perminantly in the background (pid file?) please e-mail me.
+.TP
+.I "refresh"
+Set the refresh rate.  The default is 100ms.
+.br
+.I "Example: \'netled console ppp0 500\'
+
+.SH BUGS
+It seems that my program will not correctly change the condition
+of the keyboard LEDs under some versions/configurations of X.
+
+.SH FIX
+If anyone fixes any bugs, or modifies my program in any way, can you please
+e-mail me a diff file containing your changes and a description of what they
+do? Thanks!
+
+.SH AUTHOR
+.TP
+Alice Bevan-McGregor (alice@gothcandy.com)
+
+.SH THANKS
+Many thanks go out to my friends:
+.br
+.I "kyhm"
+for showing me the wonders of Linux
+.br
+.I "redx"
+for alpha/beta testing
+.br 
+.I "Midhir"
+for support and more testing!
+.br
+.I "Linux community"
+to everyone who ever coded a program for other people to use, that is
+what made me start this project.
+
+.SH FILES
+.TP
+/etc/netled.conf
