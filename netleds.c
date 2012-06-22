@@ -1,55 +1,41 @@
-/* 
-Last updated: Tue May 04 14:11:07 EDT 1999    
-*/  
-
 #include <linux/kd.h>
 #include <linux/types.h>
 #include "netleds.h"
 
-void scrollon(int ttyfd)
-{
-    unsigned char savedleds; 	/* saved led states */
+unsigned char savedleds = 0; 	/* saved led states */
 
+void scrollon(void)
+{
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds^LED_SCR);
 }
 
-void scrolloff(int ttyfd)
+void scrolloff(void)
 {
-    unsigned char savedleds;
-
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds&~LED_SCR);
 }
 
-void capson(int ttyfd)
+void capson(void)
 {
-    unsigned char savedleds;
-
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds^LED_CAP);
 }
 
-void capsoff(int ttyfd)
+void capsoff(void)
 {
-    unsigned char savedleds;
-
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds&~LED_CAP);
 }
 
-void numon(int ttyfd)
+void numon(void)
 {
-    unsigned char savedleds;
-
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds^LED_NUM);
 }
 
-void numoff(int ttyfd)
+void numoff(void)
 {
-    unsigned char savedleds;
-
     ioctl(ttyfd,KDGETLED,&savedleds);
     ioctl(ttyfd,KDSETLED,savedleds&~LED_NUM);
 }

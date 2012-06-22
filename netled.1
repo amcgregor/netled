@@ -3,7 +3,7 @@
 netled \- device monitoring utility
 .SH SYNOPSIS
 .B netled
-<console> <interface> [-k] [refresh]
+<console> <interface> [refresh] [-k]
 
 .SH DESCRIPTION
 .BR netled 
@@ -37,17 +37,20 @@ can monitor.  eth0, lo, ppp0, etc.
 .br
 .I "Example: \'netled console ppp0\'
 .TP
-.I "\-k"
-Kill.  In a later version, this will be implemented.  If anyone can tell me how to implement running NetLED perminantly in the background (pid file?) please e-mail me.
-.TP
 .I "refresh"
 Set the refresh rate.  The default is 100ms.
+.TP
+.I "\-k"
+Kill.  In a later version, this will be implemented.  If anyone can tell me how to implement running NetLED perminantly in the background (pid file?) please e-mail me.
 .br
 .I "Example: \'netled console ppp0 500\'
 
 .SH BUGS
 It seems that my program will not correctly change the condition
-of the keyboard LEDs under some versions/configurations of X.
+of the keyboard LEDs under some versions/configurations of X.  Fixed in this
+version is a problem with security, a problem with people typing /dev/ in
+front of the device, and gave the user some options regarding to
+downloading...
 
 .SH FIX
 If anyone fixes any bugs, or modifies my program in any way, can you please
@@ -56,23 +59,28 @@ do? Thanks!
 
 .SH AUTHOR
 .TP
-Alice Bevan-McGregor (alice@gothcandy.com)
+Alice Bevan-McGregor <alice@gothcandy.com>
 
 .SH THANKS
 Many thanks go out to my friends:
 .br
-.I "kyhm"
+.I Morgan Hughes
 for showing me the wonders of Linux
 .br
-.I "redx"
+.I RedX
 for alpha/beta testing
 .br 
-.I "Midhir"
+.I Midhir
 for support and more testing!
 .br
-.I "Linux community"
-to everyone who ever coded a program for other people to use, that is
-what made me start this project.
+.I Steve Shah
+&
+.I Spoon
+for their help with developing a version that works with 2.1.x and 2.2.x
+kernels.
+.br
+.I Robert Lynch
+for his time helping me with the blasted RPM system!
 
 .SH FILES
 .TP

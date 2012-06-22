@@ -24,3 +24,8 @@
     Version 1.1
      - Added deamon support. (but you still need to kill it yourself)
      - Now has support for the <refresh> command line arg.
+ ______________________________________________________________________________
+ 
+    Version 1.2
+     - Fixed a security problem.
+     - Made the command line a little more user friendly. (/dev/)
